@@ -28,12 +28,12 @@ public class TicketSystem {
 
         }
     }
+
     public static class PrintQueue {
         public PrintQueue() {
             System.out.println("Tickets left: ");
-            for (int i = 0; i < tickets.size();i++)
-            {
-                System.out.println(tickets.get(i));
+            for (Integer ticket : tickets) {
+                System.out.println(ticket);
             }
             System.out.println("-----------------");
         }
