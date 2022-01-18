@@ -35,7 +35,7 @@ public class TicketQueue {
                     quit();
                     break;
                 default:
-                    System.out.println("Invalid menu choice, please choose 1-4.");
+                    System.out.println("Invalid menu choice. Please choose 1-4.");
                     break;
             }
         }
