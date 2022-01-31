@@ -1,5 +1,7 @@
 import java.util.Scanner;
 
+// https://www.figma.com/file/7EKS5bJLjZAZQ44VPt7C8a/Super-duper-wireframe
+
 /*
  * Access modifiers
  * The only access modifier needed is public on our main method
@@ -45,15 +47,15 @@ class TicketQueue {
      * og enkelt å implementere systemet på en fysisk lokasjon
      */
     static Scanner scanner = new Scanner(System.in);
-
+    private static TicketSystem ticketSystem;
     public static void main(String[] args) {
-        IO io = new IO("test");
-        //boolean test = io.checkCRC("$nncmdxxxx,yyyy,zzz*16", 16);
-        IO.Message msg = io.decode("$nncmdxxxx,yyyy,zzz*16");
-
-        TicketSystem ticketSystem = new TicketSystem();
         //Debug.on();
         Debug.readConfig();
+
+        ticketSystem = new TicketSystem();
+        testCode();
+
+
         int choice = 0;
 
         while (choice != 4) {
@@ -79,6 +81,64 @@ class TicketQueue {
             }
         }
     }
+    private static void testCode() {
+        final IO io = new IO();
+        final TicketSystem ticketSystem = io.getTicketSystem();
+        final Controller controller = new Controller();
+        int nextInQueue;
+
+        // TEST: io.checkCRC
+        String message = "$nncmdxxxx,yyyy,zzz*16\r\n";
+        IO.Message msg = io.decode(message);
+        boolean checkCRC = io.checkCRC(message);
+        Debug.console("io.checkCRC(message) returned " + checkCRC);
+        /**
+         *  io.rx(message) is called from IO-thread when a complete message has arrived
+         *  Call io.rx(message) to simulate messages from the controller
+         *  io.rx(message) will parse the message and call io.tx() according to message
+         */
+
+        // Simulate 2 New Ticket button click from customer
+        message = io.message(IO.Sender.BTNNEW, IO.Commands.NEWTICKET);
+        // TEST: IO.Commands.NEWTICKET
+        io.rx(message); // Simulate message from New Ticket Button
+        // TEST: IO.Commands.NEWTICKET
+        io.rx(message); // Simulate message from New Ticket Button
+
+        // Simulate Next Customer button click from register 1 staff
+        // TEST: IO.Commands.NEXTICKET
+        message = io.message(IO.Sender.BTN1, IO.Commands.NEXTICKET);
+        msg = io.decode(message);
+        int registerNumber = Integer.parseInt(msg.nn);// 4 + 5 = 9
+        // Set current ticket served in register[registerNumber]
+        nextInQueue = ticketSystem.getNextInQueue().getNumber();
+        controller.register[registerNumber].setTicketNumber(nextInQueue);
+        io.rx(message);
+
+        // Simulate Next Customer button click from register 3 staff
+        // TEST: IO.Commands.NEXTICKET
+        message = io.message(IO.Sender.BTN3, IO.Commands.NEXTICKET);
+        msg = io.decode(message);
+        registerNumber = Integer.parseInt(msg.nn);// 4 + 5 = 9
+        // Set current ticket served in register[registerNumber]
+        nextInQueue = ticketSystem.getNextInQueue().getNumber();
+
+        controller.register[registerNumber].setTicketNumber(nextInQueue);
+        io.rx(message);
+
+        // Send message to common screen about all customers served in registers now
+        // TEST: IO.Commands.MSGMAIN
+        int[] currentCustomersServed = new int[4];
+        String customersServed = "";
+        for (int i=0; i<4; i++) {
+            currentCustomersServed[i] = controller.register[i].getTicketNumber();
+            customersServed += currentCustomersServed[i] + ",";
+        }
+        customersServed = customersServed.substring(0, customersServed.length()-1);
+        message = io.message(IO.Sender.APP, IO.Commands.MSGMAIN, customersServed);
+        io.tx(message);
+        boolean foo = true;
+    }
 
     static void printMeny() {
         String meny = "** MENY FOR BILLETTSYSTEM **\n";
@@ -93,9 +153,10 @@ class TicketQueue {
     static int getChoice() {
         String choice = scanner.nextLine();
         choice = choice.replaceAll("[^\\d]", "");
-        if (choice.matches(choice)) {
+        if (choice.matches("")) {
             return 0;
         }
-        return Integer.parseInt(scanner.nextLine());
+        final int i = Integer.parseInt(choice);
+        return i < 5 ? i : 0;
     }
 }
